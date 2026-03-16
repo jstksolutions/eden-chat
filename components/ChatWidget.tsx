@@ -9,11 +9,24 @@ import { useState, useRef, useEffect, useMemo } from "react";
 interface ChatWidgetProps {
   facilityId: string;
   facilityName: string;
+  facilityType?: "snf" | "al" | "memory_care" | "rehab";
   primaryColor?: string;
   isEmbedded?: boolean;
 }
 
 const LEAD_REGEX = /<lead_data>([\s\S]*?)<\/lead_data>/;
+
+const SNF_QUICK_REPLIES = [
+  "I need rehab after a hospital stay",
+  "I'm a healthcare professional",
+  "Long-term care options",
+];
+
+const AL_QUICK_REPLIES = [
+  "Schedule a tour",
+  "Tell me about your community",
+  "Pricing information",
+];
 
 function extractLeadData(text: string): { clean: string; data: Record<string, string> | null } {
   const match = text.match(LEAD_REGEX);
@@ -64,19 +77,23 @@ function TypingDots() {
 export function ChatWidget({
   facilityId,
   facilityName,
+  facilityType,
   primaryColor = "#2E5A3A",
   isEmbedded = false,
 }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(isEmbedded);
   const [input, setInput] = useState("");
+  const [hasUserMessage, setHasUserMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const submittedLeads = useRef<Set<string>>(new Set());
+  const messageTimestamps = useRef<Map<string, string>>(new Map());
+  const sessionId = useRef(crypto.randomUUID());
 
   const transport = useMemo(
     () =>
       new TextStreamChatTransport({
         api: "/api/chat",
-        body: { facilityId },
+        body: { facilityId, sessionId: sessionId.current },
       }),
     [facilityId]
   );
@@ -88,12 +105,17 @@ export function ChatWidget({
 
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Auto-scroll to bottom on new content
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Capture lead data from assistant messages and POST to /api/lead
+  useEffect(() => {
+    if (messages.some((m) => m.role === "user")) {
+      setHasUserMessage(true);
+    }
+  }, [messages]);
+
+  // Fire-and-forget lead capture (server-side upsert handles the real work)
   useEffect(() => {
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
@@ -106,18 +128,17 @@ export function ChatWidget({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...data, facilityId }),
-        }).catch(() => {
-          // fire-and-forget; don't block UI on lead capture errors
-        });
+        }).catch(() => {});
       }
     }
   }, [messages, facilityId]);
 
-  // Reset messages when facilityId changes (when used without key prop)
   useEffect(() => {
     setMessages([makeWelcomeMessage(facilityName)]);
     submittedLeads.current.clear();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    messageTimestamps.current.clear();
+    setHasUserMessage(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facilityId]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -135,12 +156,33 @@ export function ChatWidget({
     }
   }
 
+  async function handleQuickReply(text: string) {
+    if (isLoading) return;
+    setInput("");
+    await sendMessage({ text });
+  }
+
+  function getTimestamp(messageId: string): string {
+    if (!messageTimestamps.current.has(messageId)) {
+      messageTimestamps.current.set(
+        messageId,
+        new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      );
+    }
+    return messageTimestamps.current.get(messageId)!;
+  }
+
+  const isSNF = facilityType === "snf" || facilityType === "rehab";
+  const quickReplies = !hasUserMessage && !isLoading
+    ? (isSNF ? SNF_QUICK_REPLIES : AL_QUICK_REPLIES)
+    : null;
+
   const chatPanel = (
     <div
       className={
         isEmbedded
           ? "flex flex-col h-full rounded-2xl overflow-hidden shadow-2xl bg-white"
-          : "flex flex-col rounded-2xl overflow-hidden shadow-2xl bg-white w-[400px] h-[600px] sm:w-[400px] sm:h-[600px] max-sm:fixed max-sm:inset-0 max-sm:w-full max-sm:h-full max-sm:rounded-none"
+          : "flex flex-col rounded-2xl overflow-hidden shadow-2xl bg-white w-[400px] h-[600px] sm:w-[400px] sm:h-[600px] max-sm:fixed max-sm:inset-0 max-sm:z-50 max-sm:w-full max-sm:h-full max-sm:rounded-none"
       }
     >
       {/* Header */}
@@ -149,7 +191,9 @@ export function ChatWidget({
         style={{ backgroundColor: primaryColor }}
       >
         <div className="flex items-center gap-2">
-          <MessageCircle className="text-white" size={20} />
+          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20">
+            <MessageCircle className="text-white" size={16} />
+          </div>
           <div>
             <p className="text-white font-semibold text-sm leading-tight">{facilityName}</p>
             <p className="text-white/80 text-xs">Care Assistant</p>
@@ -174,10 +218,11 @@ export function ChatWidget({
           if (!displayText) return null;
 
           const isUser = msg.role === "user";
+          const timestamp = getTimestamp(msg.id);
           return (
             <div
               key={msg.id}
-              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+              className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
             >
               <div
                 className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
@@ -189,9 +234,26 @@ export function ChatWidget({
               >
                 {displayText}
               </div>
+              <span className="text-[10px] text-gray-400 mt-0.5 px-1">{timestamp}</span>
             </div>
           );
         })}
+
+        {/* Quick reply chips — disappear after first user message */}
+        {quickReplies && (
+          <div className="flex flex-col gap-1.5 pt-1">
+            {quickReplies.map((reply) => (
+              <button
+                key={reply}
+                onClick={() => void handleQuickReply(reply)}
+                className="text-left text-sm px-3 py-2 rounded-xl border transition-opacity hover:opacity-70 active:opacity-50"
+                style={{ borderColor: primaryColor, color: primaryColor }}
+              >
+                {reply}
+              </button>
+            ))}
+          </div>
+        )}
 
         {isLoading && (
           <div className="flex justify-start">
@@ -213,8 +275,8 @@ export function ChatWidget({
             onKeyDown={handleKeyDown}
             placeholder="Type your message…"
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent leading-relaxed max-h-32 overflow-y-auto"
-            style={{ focusRingColor: primaryColor } as React.CSSProperties}
+            className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--widget-primary)] focus:border-transparent leading-relaxed max-h-32 overflow-y-auto"
+            style={{ "--widget-primary": primaryColor } as React.CSSProperties}
             disabled={isLoading}
           />
           <button
@@ -228,7 +290,7 @@ export function ChatWidget({
           </button>
         </form>
         <p className="text-center text-xs text-gray-400 pb-2">
-          Powered by JS Tech
+          Powered by JS Technology Solutions
         </p>
       </div>
     </div>
@@ -238,14 +300,12 @@ export function ChatWidget({
 
   return (
     <>
-      {/* Floating chat panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-4 z-50 transition-all duration-300 ease-in-out animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-24 right-4 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200">
           {chatPanel}
         </div>
       )}
 
-      {/* Floating bubble button */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform duration-150"

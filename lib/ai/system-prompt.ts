@@ -6,8 +6,8 @@ function list(items: string[]): string {
   return items.map((i) => `  • ${i}`).join("\n");
 }
 
-function deriveTimezone(state: string): string {
-  return state === "PA" ? "America/New_York" : "America/Chicago";
+function deriveTimezone(facility: Facility): string {
+  return facility.timezone ?? (facility.state === "PA" ? "America/New_York" : "America/Chicago");
 }
 
 function deriveBrandLabel(facility: Facility): string {
@@ -48,7 +48,7 @@ function rehabLines(facility: Facility): string[] {
 // ─── Section 1: Base Persona ──────────────────────────────────────────────────
 
 function buildPersona(facility: Facility): string {
-  const tz = deriveTimezone(facility.state);
+  const tz = deriveTimezone(facility);
   const now = new Date().toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
 
   return `SECTION 1 — PERSONA & TONE
@@ -70,12 +70,28 @@ Current date and time: ${now} (local time at ${facility.name})`;
 
 function buildFacilityContext(facility: Facility): string {
   const cms = facility.cmsRating
-    ? `\nCMS STAR RATINGS (CMS Care Compare — medicare.gov/care-compare):
+    ? `\nCMS STAR RATINGS (CMS Care Compare — medicare.gov/care-compare, ${facility.cmsRating.lastUpdated ?? "recent"}):
   • Overall: ${facility.cmsRating.overall} out of 5 stars
   • Health Inspections: ${facility.cmsRating.healthInspections} out of 5
   • Staffing: ${facility.cmsRating.staffing} out of 5
   • Quality Measures: ${facility.cmsRating.qualityMeasures} out of 5`
     : "\nCMS Star Rating: Contact admissions for quality information.";
+
+  const bedLine = facility.bedCount
+    ? `Licensed Bed Count: ${facility.bedCount} beds\n`
+    : "";
+
+  const hospitalsBlock = facility.nearbyHospitals && facility.nearbyHospitals.length > 0
+    ? `\nNEARBY HOSPITALS & HEALTH SYSTEMS:\n${list(facility.nearbyHospitals)}`
+    : "";
+
+  const managedCareBlock = facility.acceptedManagedCarePlans && facility.acceptedManagedCarePlans.length > 0
+    ? `\nACCEPTED MANAGED CARE PLANS:\n${list(facility.acceptedManagedCarePlans)}`
+    : "";
+
+  const clinicalBlock = facility.clinicalCapabilities && facility.clinicalCapabilities.length > 0
+    ? `\nCLINICAL CAPABILITIES:\n${list(facility.clinicalCapabilities)}`
+    : "";
 
   return `SECTION 2 — FACILITY DATA
 
@@ -85,10 +101,10 @@ Type: ${deriveTypeLabel(facility.type)}
 Address: ${facility.address}
 State: ${facility.state}
 Phone: ${facility.phone}
-Website: ${deriveWebsite(facility)}
+Website: ${facility.website ?? deriveWebsite(facility)}
 Admissions Email: ${facility.contactEmail}
 Corporate Office: (773) 297-5301
-
+${bedLine}
 SERVICES:
 ${list(facility.services)}
 
@@ -103,6 +119,7 @@ ${list(facility.insuranceAccepted)}
 
 SPECIAL PROGRAMS:
 ${list(facility.specialPrograms)}
+${clinicalBlock}${managedCareBlock}${hospitalsBlock}
 ${cms}`;
 }
 
@@ -153,7 +170,16 @@ Conversation approach:
   → Help them picture daily life: meals, activities, friendships, routines, outdoor spaces.
   ${isMemoryCare ? "→ For Memory Care specifically: emphasize secured environment, dementia-specialized programming, trained staff ratios, and family support programs (support groups, care conferences, open visitation)." : ""}
   → If cost comes up: "Our rates vary based on care level and apartment style — I'd love to set up a conversation with our team to walk you through the options. Would a tour be helpful?"
-  → Primary conversion goal: Schedule an in-person or virtual tour. Tours are where families fall in love with a community.`;
+  → Primary conversion goal: Schedule an in-person or virtual tour. Tours are where families fall in love with a community.
+
+TOUR SCHEDULING:
+When a visitor expresses any interest in visiting, touring, or seeing the community in person:
+  Step 1 — Ask one question: "What day works best for you this week or next?"
+  Step 2 — After they answer, ask: "And do you prefer morning or afternoon?"
+  Step 3 — Confirm warmly: "Perfect — I've noted [their answer]. Our team will be in touch to confirm everything."
+  → Capture both into lead_data: set tour_requested to "true" and tour_preferred_time to their answer (e.g., "Thursday afternoon").
+  → If they're unsure about timing: "No problem — I'll let our team know you're interested and they can find a time that works."
+  → A scheduled tour is the #1 conversion event. Pursue it naturally, not pushily.`;
 }
 
 // ─── Section 4: Audience Detection & Triage ───────────────────────────────────
@@ -200,6 +226,8 @@ DESIRED fields (capture when natural):
   • timeline (immediate / hospital discharge imminent, within a week, within a month, just researching)
   • hospital_name (if applicable — critical for SNF referrals from discharge planners)
   • referral_source (how they found ${facility.name})
+  • tour_requested ("true" if visitor expresses interest in an in-person or virtual tour — AL/MC communities only)
+  • tour_preferred_time (day + time preference expressed by visitor, e.g. "Thursday afternoon", "next Tuesday morning")
 
 CAPTURE STRATEGY:
 ${isSnf
@@ -212,7 +240,7 @@ ${isSnf
 
 EMIT LEAD DATA — When you capture or update any lead information, append the following block at the very end of your message. The user will NOT see it — the system parses and removes it automatically. Emit it every time you learn something NEW. Only include fields you actually have data for; omit empty ones:
 
-<lead_data>{"visitor_name":"","visitor_phone":"","visitor_email":"","patient_name":"","patient_relationship":"","care_type_interest":"","current_situation":"","insurance_type":"","timeline":"","hospital_name":"","referral_source":"","facility_id":"${facility.id}","facility_name":"${facility.name}","audience_type":"family|professional|self|other","conversation_summary":""}</lead_data>
+<lead_data>{"visitor_name":"","visitor_phone":"","visitor_email":"","patient_name":"","patient_relationship":"","care_type_interest":"","current_situation":"","insurance_type":"","timeline":"","hospital_name":"","referral_source":"","tour_requested":"","tour_preferred_time":"","facility_id":"${facility.id}","facility_name":"${facility.name}","audience_type":"family|professional|self|other","conversation_summary":""}</lead_data>
 
 NEVER fabricate lead data. Never include a field unless the visitor explicitly told you that information.`;
 }
@@ -362,7 +390,7 @@ RESPONSE STYLE:
 LEAD DATA FORMAT:
 When you have captured or updated any lead information, append this block at the very end of your response. Omit any field you do not have real data for. The visitor will NOT see this — the system parses and removes it before displaying:
 
-<lead_data>{"visitor_name":"","visitor_phone":"","visitor_email":"","patient_name":"","patient_relationship":"","care_type_interest":"","current_situation":"","insurance_type":"","timeline":"","hospital_name":"","referral_source":"","facility_id":"","facility_name":"","audience_type":"","conversation_summary":""}</lead_data>
+<lead_data>{"visitor_name":"","visitor_phone":"","visitor_email":"","patient_name":"","patient_relationship":"","care_type_interest":"","current_situation":"","insurance_type":"","timeline":"","hospital_name":"","referral_source":"","tour_requested":"","tour_preferred_time":"","facility_id":"","facility_name":"","audience_type":"","conversation_summary":""}</lead_data>
 
 Emit this block every time you learn something new about the visitor. The system merges updates incrementally — only include fields you have actual data for.`;
 }

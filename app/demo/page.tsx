@@ -1,210 +1,77 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { getAllFacilities } from "@/lib/facilities/data";
-import type { Facility } from "@/lib/facilities/data";
-import { ChatWidget } from "@/components/ChatWidget";
-import { Phone, MapPin, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { Copy, Check, ExternalLink, BookmarkIcon, BarChart2 } from "lucide-react";
 
 const EDEN_GREEN = "#2E5A3A";
-const EDEN_GREEN_LIGHT = "#4A8A5F";
+const PROD_URL = "https://eden-chat.vercel.app";
+const WIDGET_URL = `${PROD_URL}/widget/eden-chat.js`;
 
-const ALL_FACILITIES = getAllFacilities();
+// Console snippet shown to the user — pretty-printed for readability
+const CONSOLE_SNIPPET = `(function () {
+  var s = document.createElement("script");
+  s.src = "${WIDGET_URL}";
+  document.body.appendChild(s);
+})();`;
 
-function getServiceCards(facility: Facility) {
-  if (facility.type === "snf") {
-    return [
-      {
-        title: "Skilled Nursing",
-        desc: "24/7 licensed nursing care with physician oversight and complex medical management.",
-        icon: "🏥",
-      },
-      {
-        title: "Rehabilitation",
-        desc: "Physical, occupational, and speech therapy to restore your strength and independence.",
-        icon: "💪",
-      },
-      {
-        title: "Long-Term Care",
-        desc: "Compassionate, personalized support for residents who call our facility home.",
-        icon: "🏠",
-      },
-    ];
+// Bookmarklet — minified, # encoded as %23 for href safety
+const BOOKMARKLET_HREF = `javascript:(function(){var s=document.createElement('script');s.src='${WIDGET_URL}';document.body.appendChild(s);})();`;
+
+// Facilities with live public websites to open as test targets
+const QUICK_TEST_SITES = [
+  {
+    label: "Edenbrook Edina",
+    url: "https://www.edenbrookedina.com",
+    type: "SNF — Minnesota",
+  },
+  {
+    label: "Edenbrook Green Bay",
+    url: "https://www.edenbrookgreenbay.com",
+    type: "SNF — Wisconsin",
+  },
+  {
+    label: "Edenbrook Wisconsin Rapids",
+    url: "https://www.edenbrookwisconsinrapids.com",
+    type: "SNF — Wisconsin",
+  },
+  {
+    label: "The Heights at Evansville",
+    url: "https://www.theheightsatevansville.com",
+    type: "AL — Wisconsin",
+  },
+];
+
+function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
-  if (facility.type === "memory_care") {
-    return [
-      {
-        title: "Memory Care",
-        desc: "Specialized programming and secured environments designed for those living with dementia.",
-        icon: "🧠",
-      },
-      {
-        title: "Daily Support",
-        desc: "Personalized assistance with daily living activities in a warm, homelike setting.",
-        icon: "🤝",
-      },
-      {
-        title: "Family Partnership",
-        desc: "Education, support groups, and open communication to keep families involved and informed.",
-        icon: "👨‍👩‍👧",
-      },
-    ];
-  }
-  // AL
-  return [
-    {
-      title: "Assisted Living",
-      desc: "Personalized support with daily activities while preserving your independence and dignity.",
-      icon: "🌟",
-    },
-    {
-      title: "Wellness Programs",
-      desc: "Fitness classes, social events, and enrichment activities for a vibrant lifestyle.",
-      icon: "🧘",
-    },
-    {
-      title: "Dining & Community",
-      desc: "Chef-prepared meals, restaurant-style dining, and a warm community to call home.",
-      icon: "🍽️",
-    },
-  ];
-}
-
-function MockWebsite({ facility }: { facility: Facility }) {
-  const cards = getServiceCards(facility);
-  const facilityTypeLabel =
-    facility.type === "snf"
-      ? "Skilled Nursing & Rehabilitation"
-      : facility.type === "memory_care"
-      ? "Memory Care Community"
-      : "Assisted Living Community";
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-white rounded-xl shadow-inner border border-gray-200">
-      {/* Fake browser chrome */}
-      <div className="shrink-0 bg-gray-100 border-b border-gray-300 px-3 py-2 flex items-center gap-2 rounded-t-xl">
-        <div className="flex gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-red-400" />
-          <span className="w-3 h-3 rounded-full bg-yellow-400" />
-          <span className="w-3 h-3 rounded-full bg-green-400" />
-        </div>
-        <div className="flex-1 bg-white rounded border border-gray-300 px-3 py-1 text-xs text-gray-500 truncate">
-          {facility.hostname}
-        </div>
-      </div>
-
-      {/* Facility nav bar */}
-      <div
-        className="shrink-0 flex items-center justify-between px-6 py-3"
-        style={{ backgroundColor: EDEN_GREEN }}
-      >
-        <span className="text-white font-bold text-sm tracking-wide">Eden Senior Care</span>
-        <nav className="hidden sm:flex gap-5 text-white/80 text-xs font-medium">
-          {["About", "Services", "Amenities", "Contact"].map((link) => (
-            <span key={link} className="hover:text-white cursor-default transition-colors">
-              {link}
-            </span>
-          ))}
-        </nav>
-      </div>
-
-      {/* Hero */}
-      <div
-        className="shrink-0 relative px-6 py-10 flex flex-col items-start justify-end gap-3"
-        style={{
-          background: `linear-gradient(135deg, ${EDEN_GREEN} 0%, ${EDEN_GREEN_LIGHT} 60%, #7AB89A 100%)`,
-          minHeight: "180px",
-        }}
-      >
-        <div className="absolute inset-0 bg-black/20 rounded-none" />
-        <div className="relative z-10">
-          <p className="text-white/70 text-xs font-medium uppercase tracking-widest mb-1">
-            {facilityTypeLabel}
-          </p>
-          <h1 className="text-white text-2xl font-bold leading-tight">{facility.name}</h1>
-          <p className="text-white/90 text-sm mt-1 mb-3">
-            Compassionate Care. Exceptional Results.
-          </p>
-          <button
-            className="bg-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-default"
-            style={{ color: EDEN_GREEN }}
-          >
-            Schedule a Visit
-          </button>
-        </div>
-      </div>
-
-      {/* Service cards */}
-      <div className="px-5 py-5">
-        <h2
-          className="text-base font-bold mb-3"
-          style={{ color: EDEN_GREEN }}
-        >
-          Our Services
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {cards.map((card) => (
-            <div
-              key={card.title}
-              className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-default"
-            >
-              <div className="text-2xl mb-2">{card.icon}</div>
-              <h3 className="font-semibold text-sm text-gray-800 mb-1">{card.title}</h3>
-              <p className="text-xs text-gray-600 leading-relaxed">{card.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Insurance strip */}
-      <div className="mx-5 mb-5 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
-        <p className="text-xs font-semibold text-gray-700 mb-1">Insurance Accepted</p>
-        <p className="text-xs text-gray-500 leading-relaxed">
-          {facility.insuranceAccepted.slice(0, 4).join(" • ")}
-          {facility.insuranceAccepted.length > 4 && " • and more"}
-        </p>
-      </div>
-
-      {/* Footer */}
-      <div
-        className="shrink-0 mt-auto px-5 py-4 border-t border-gray-200"
-        style={{ backgroundColor: "#F9FAFB" }}
-      >
-        <div className="flex flex-col gap-1.5 text-xs text-gray-500">
-          <div className="flex items-start gap-1.5">
-            <MapPin size={12} className="mt-0.5 shrink-0" style={{ color: EDEN_GREEN }} />
-            <span>{facility.address}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Phone size={12} className="shrink-0" style={{ color: EDEN_GREEN }} />
-            <span>{facility.phone}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <button
+      onClick={() => void handleCopy()}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all"
+      style={
+        copied
+          ? { backgroundColor: "#f0fdf4", borderColor: "#86efac", color: "#15803d" }
+          : { backgroundColor: "white", borderColor: "#d1d5db", color: "#374151" }
+      }
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+      {copied ? "Copied!" : label}
+    </button>
   );
 }
 
 export default function DemoPage() {
-  const [selectedId, setSelectedId] = useState<string>(ALL_FACILITIES[0].id);
-
-  const selectedFacility = useMemo(
-    () => ALL_FACILITIES.find((f) => f.id === selectedId) ?? ALL_FACILITIES[0],
-    [selectedId]
-  );
-
-  // Group facilities for the dropdown
-  const mnFacilities = ALL_FACILITIES.filter((f) => f.state === "MN");
-  const wiFacilities = ALL_FACILITIES.filter(
-    (f) => f.state === "WI" && f.division === "edenbrook"
-  );
-  const vistaFacilities = ALL_FACILITIES.filter((f) => f.division === "vista");
-
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Top bar */}
-      <header className="shrink-0 bg-white shadow-sm border-b border-gray-200 z-10">
-        <div className="max-w-screen-2xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
@@ -212,85 +79,210 @@ export default function DemoPage() {
             >
               <span className="text-white text-xs font-bold">E</span>
             </div>
-            <div>
-              <span className="font-bold text-gray-800 text-sm">Eden Care Assistant</span>
-              <span className="text-gray-400 text-sm"> — Live Demo</span>
-            </div>
+            <span className="font-bold text-gray-800 text-sm">
+              Eden Care Assistant{" "}
+              <span className="text-gray-400 font-normal">— Setup</span>
+            </span>
           </div>
-
-          {/* Facility selector */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500 hidden sm:block whitespace-nowrap">
-              Select facility:
-            </label>
-            <div className="relative">
-              <select
-                value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer max-w-[260px] truncate"
-                style={{ focusRingColor: EDEN_GREEN } as React.CSSProperties}
-              >
-                <optgroup label="Edenbrook — Minnesota">
-                  {mnFacilities.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Edenbrook — Wisconsin">
-                  {wiFacilities.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Vista Senior Living">
-                  {vistaFacilities.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-              <ChevronDown
-                size={14}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-              />
-            </div>
-          </div>
+          <a
+            href="/admin"
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <BarChart2 size={14} />
+            Leads Dashboard →
+          </a>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden">
-        <div className="max-w-screen-2xl mx-auto h-full px-4 py-4">
-          {/* Desktop: two-column grid. Mobile: stacked */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full">
-            {/* Mock website — 3 cols */}
-            <div className="lg:col-span-3 overflow-hidden max-lg:h-[340px]">
-              <MockWebsite facility={selectedFacility} />
+      <main className="max-w-3xl mx-auto px-6 py-12 space-y-12">
+        {/* Hero */}
+        <section>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            Eden Care Assistant
+          </h1>
+          <p className="text-lg text-gray-500 leading-relaxed max-w-2xl">
+            An AI chat widget for Eden&apos;s facility network. Drop it on any Eden website
+            in under 30 seconds — no code deployment, no IT ticket. It auto-detects
+            the facility from the page&apos;s hostname and loads facility-specific context.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Live AI (Claude claude-sonnet-4-5)
             </div>
-
-            {/* Chat widget — 2 cols */}
-            <div className="lg:col-span-2 overflow-hidden">
-              <ChatWidget
-                key={selectedFacility.id}
-                facilityId={selectedFacility.id}
-                facilityName={selectedFacility.name}
-                primaryColor={EDEN_GREEN}
-                isEmbedded
-              />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              31 facilities pre-loaded
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Lead capture + email alerts
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* ── Section 1: Console inject ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-800">
+              1 — Inject via browser console
+            </h2>
+            <CopyButton text={CONSOLE_SNIPPET} label="Copy snippet" />
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Open any Eden facility website, press{" "}
+            <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
+              F12
+            </kbd>{" "}
+            → Console, paste this, and hit Enter. The chat widget appears instantly.
+          </p>
+          <div className="relative bg-gray-900 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-1.5 px-4 py-3 border-b border-gray-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              <span className="ml-2 text-xs text-gray-400 font-mono">Console</span>
+            </div>
+            <pre className="px-5 py-4 text-sm font-mono text-green-400 overflow-x-auto leading-relaxed whitespace-pre">
+              {CONSOLE_SNIPPET}
+            </pre>
+          </div>
+        </section>
+
+        {/* ── Section 2: Bookmarklet ── */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">
+            2 — Bookmarklet (click-to-inject)
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Drag the button below to your bookmarks bar. Then on any Eden website,
+            just click the bookmark — no console needed.
+          </p>
+          <div className="flex items-center gap-4 p-5 bg-white border border-gray-200 border-dashed rounded-xl">
+            <a
+              href={BOOKMARKLET_HREF}
+              onClick={(e) => e.preventDefault()}
+              draggable
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm select-none cursor-grab active:cursor-grabbing"
+              style={{ backgroundColor: EDEN_GREEN }}
+              title="Drag me to your bookmarks bar"
+            >
+              <BookmarkIcon size={15} />
+              Eden Chat Widget
+            </a>
+            <div>
+              <p className="text-sm font-medium text-gray-700">
+                Drag → Bookmarks bar
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Or right-click → Bookmark this link
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Section 3: Quick Test links ── */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">
+            3 — Quick test on real Eden sites
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Open a facility website, then use the console snippet or bookmarklet above
+            to inject the widget. The assistant will automatically load that
+            facility&apos;s data.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {QUICK_TEST_SITES.map((site) => (
+              <a
+                key={site.url}
+                href={site.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start justify-between gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-gray-800 group-hover:text-gray-900">
+                    {site.label}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">{site.type}</p>
+                  <p className="text-xs text-gray-400 mt-1 font-mono">
+                    {site.url.replace("https://www.", "")}
+                  </p>
+                </div>
+                <ExternalLink
+                  size={14}
+                  className="text-gray-400 group-hover:text-gray-600 shrink-0 mt-0.5 transition-colors"
+                />
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Section 4: WordPress embed code ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-800">
+              4 — Permanent embed (WordPress)
+            </h2>
+            <CopyButton
+              text={`<script src="${WIDGET_URL}" async></script>`}
+              label="Copy tag"
+            />
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            For a permanent installation, paste this before the{" "}
+            <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-mono">
+              &lt;/body&gt;
+            </code>{" "}
+            tag in the WordPress theme editor or via the WPCode plugin. The widget
+            auto-detects the facility from the page&apos;s hostname.
+          </p>
+          <div className="bg-gray-900 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-1.5 px-4 py-3 border-b border-gray-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              <span className="ml-2 text-xs text-gray-400 font-mono">HTML</span>
+            </div>
+            <pre className="px-5 py-4 text-sm font-mono text-blue-300 overflow-x-auto">
+              {`<script src="${WIDGET_URL}" async></script>`}
+            </pre>
+          </div>
+        </section>
+
+        {/* ── Leads dashboard CTA ── */}
+        <section>
+          <div
+            className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-4"
+            style={{ backgroundColor: EDEN_GREEN }}
+          >
+            <div className="flex-1">
+              <p className="font-semibold text-white text-base">
+                View captured leads
+              </p>
+              <p className="text-white/70 text-sm mt-1">
+                Every conversation that captures a name + phone number sends an
+                email alert and appears in the Leads Dashboard.
+              </p>
+            </div>
+            <a
+              href="/admin"
+              className="shrink-0 inline-flex items-center gap-2 bg-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{ color: EDEN_GREEN }}
+            >
+              <BarChart2 size={15} />
+              Leads Dashboard
+            </a>
+          </div>
+        </section>
       </main>
 
-      {/* Info bar */}
-      <footer className="shrink-0 border-t border-gray-200 bg-white/80 backdrop-blur-sm">
-        <p className="text-center text-xs text-gray-500 py-2.5 px-4">
-          This is a live AI demo. The assistant has real-time knowledge of each Eden facility&apos;s
-          services, insurance, and amenities. Try switching facilities to see facility-specific
-          responses.
+      <footer className="border-t border-gray-200 mt-16">
+        <p className="text-center text-xs text-gray-400 py-6">
+          Eden Care Assistant · Built by JS Technology Solutions ·{" "}
+          <a href="/admin" className="hover:text-gray-600 transition-colors">
+            Admin
+          </a>
         </p>
       </footer>
     </div>
