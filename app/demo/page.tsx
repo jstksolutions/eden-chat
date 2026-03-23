@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, ExternalLink, BookmarkIcon, BarChart2 } from "lucide-react";
+import { Copy, Check, ExternalLink, BarChart2 } from "lucide-react";
 
 const EDEN_GREEN = "#2E5A3A";
-const PROD_URL = "https://eden-chat.vercel.app";
+const PROD_URL = "https://eden-chat-two.vercel.app";
 const WIDGET_URL = `${PROD_URL}/widget/eden-chat.js`;
 
 // Console snippet shown to the user — pretty-printed for readability
@@ -155,29 +155,19 @@ export default function DemoPage() {
             2 — Bookmarklet (click-to-inject)
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            Drag the button below to your bookmarks bar. Then on any Eden website,
-            just click the bookmark — no console needed.
+            Create a bookmarklet so you can inject the widget on any Eden website
+            with a single click — no console needed.
           </p>
-          <div className="flex items-center gap-4 p-5 bg-white border border-gray-200 border-dashed rounded-xl">
-            <a
-              href={BOOKMARKLET_HREF}
-              onClick={(e) => e.preventDefault()}
-              draggable
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm select-none cursor-grab active:cursor-grabbing"
-              style={{ backgroundColor: EDEN_GREEN }}
-              title="Drag me to your bookmarks bar"
-            >
-              <BookmarkIcon size={15} />
-              Eden Chat Widget
-            </a>
-            <div>
-              <p className="text-sm font-medium text-gray-700">
-                Drag → Bookmarks bar
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Or right-click → Bookmark this link
-              </p>
+          <div className="p-5 bg-white border border-gray-200 border-dashed rounded-xl space-y-4">
+            <div className="flex items-center gap-4">
+              <CopyButton text={BOOKMARKLET_HREF} label="Copy bookmarklet code" />
             </div>
+            <ol className="text-sm text-gray-600 list-decimal list-inside space-y-1.5">
+              <li>Copy the code above</li>
+              <li>Right-click your bookmarks bar → <span className="font-medium text-gray-800">Add page</span> (or <span className="font-medium text-gray-800">Add bookmark</span>)</li>
+              <li>Name it <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">Eden Chat Widget</span> and paste the code as the URL</li>
+              <li>Click the bookmark on any Eden facility website to inject the widget</li>
+            </ol>
           </div>
         </section>
 
