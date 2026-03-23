@@ -234,7 +234,7 @@ export function ChatWidget({
               >
                 {displayText}
               </div>
-              <span className="text-[10px] text-gray-400 mt-0.5 px-1">{timestamp}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5 px-1" suppressHydrationWarning>{timestamp}</span>
             </div>
           );
         })}
