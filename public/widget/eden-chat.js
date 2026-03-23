@@ -246,7 +246,7 @@
       overlay.style[side === "right" ? "left" : "right"] = "auto";
     }
 
-    overlay.classList.add(NS.replace("-", "") + "-open"); // eden-chat-open
+    overlay.classList.add("eden-chat-open"); // eden-chat-open
     bubble.setAttribute("aria-label", "Close Eden Care Assistant");
     bubble.innerHTML = ICON_CLOSE;
     isOpen = true;
@@ -254,7 +254,7 @@
 
   function closeWidget() {
     if (!overlay) return;
-    overlay.classList.remove(NS.replace("-", "") + "-open");
+    overlay.classList.remove("eden-chat-open");
     bubble.setAttribute("aria-label", "Open Eden Care Assistant");
     bubble.innerHTML = ICON_CHAT;
     isOpen = false;
