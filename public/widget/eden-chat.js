@@ -33,7 +33,10 @@
     "woodsideseniorcommunities.com": "woodside-senior",
     "woodsofcaledonia.com": "woods-of-caledonia",
     "hilltopseniorliving.com": "hilltop-senior-living",
-    "vistapinehaven.com": "vista-pine-haven"
+    "vistapinehaven.com": "vista-pine-haven",
+    "missioncreekseniorliving.com": "mission-creek",
+    "edenvistaoshkosh.com": "eden-vista-oshkosh",
+    "edenvistastow.com": "eden-vista-stow"
   };
 
   function detectFacilityFromHostname() {
