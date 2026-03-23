@@ -1,21 +1,59 @@
 (function () {
   "use strict";
 
+  // ── Hostname → facility ID lookup (for bookmarklet / console injection) ──
+  var HOST_MAP = {
+    "edenbrookedina.com": "edenbrook-edina",
+    "edenbrookrochester.com": "edenbrook-rochester",
+    "edenbrookrochesterwest.com": "edenbrook-rochester-west",
+    "edenbrookstcloud.com": "edenbrook-st-cloud",
+    "edenbrookpinehaven.com": "edenbrook-pine-haven",
+    "naturespointrehab.com": "natures-point",
+    "fairoakslodge.com": "fair-oaks-lodge",
+    "edenbrookappleton.com": "edenbrook-appleton",
+    "edenbrookgreenbay.com": "edenbrook-green-bay",
+    "edenbrookfonddulac.com": "edenbrook-fond-du-lac",
+    "edenbrookoshkosh.com": "edenbrook-oshkosh",
+    "edenbrookplatteville.com": "edenbrook-platteville",
+    "edenbrooksheboygan.com": "edenbrook-sheboygan",
+    "edenbrookwisconsinrapids.com": "edenbrook-wisconsin-rapids",
+    "edenbrooklakeside.com": "edenbrook-lakeside",
+    "whisperingpinesrehab.com": "whispering-pines",
+    "omrocarecenter.com": "omro-care-center",
+    "friendlyvillagerehab.com": "friendly-village",
+    "evansvillemanor.com": "evansville-manor",
+    "wolvertonglenhcc.com": "wolverton-glen",
+    "edenhampton.com": "eden-hampton",
+    "edennorthpa.com": "eden-north",
+    "edensouthpa.com": "eden-south",
+    "edenyeadon.com": "eden-yeadon",
+    "edengreenwoodhill.com": "eden-greenwood-hill",
+    "edensecondave.com": "eden-second-ave",
+    "theheightsatevansville.com": "heights-at-evansville",
+    "woodsideseniorcommunities.com": "woodside-senior",
+    "woodsofcaledonia.com": "woods-of-caledonia",
+    "hilltopseniorliving.com": "hilltop-senior-living",
+    "vistapinehaven.com": "vista-pine-haven"
+  };
+
+  function detectFacilityFromHostname() {
+    var host = window.location.hostname.replace(/^www\./, "");
+    return HOST_MAP[host] || null;
+  }
+
   // ── Config ────────────────────────────────────────────────────────────────
   var script =
     document.currentScript ||
     document.querySelector('script[data-facility-id]');
 
-  if (!script) return;
+  var facilityId = (script && script.getAttribute("data-facility-id")) || detectFacilityFromHostname();
+  if (!facilityId) return; // unknown site, no facility to load
 
-  var facilityId = script.getAttribute("data-facility-id");
-  if (!facilityId) return;
-
-  var position = script.getAttribute("data-position") || "bottom-right";
-  var primaryColor = script.getAttribute("data-primary-color") || "#2E5A3A";
+  var position = (script && script.getAttribute("data-position")) || "bottom-right";
+  var primaryColor = (script && script.getAttribute("data-primary-color")) || "#2E5A3A";
   var appUrl =
-    script.getAttribute("data-app-url") ||
-    (script.src
+    (script && script.getAttribute("data-app-url")) ||
+    (script && script.src
       ? script.src.replace(/\/widget\/eden-chat\.js.*$/, "")
       : "https://eden-chat-two.vercel.app");
 
