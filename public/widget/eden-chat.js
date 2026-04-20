@@ -58,7 +58,7 @@
     (script && script.getAttribute("data-app-url")) ||
     (script && script.src
       ? script.src.replace(/\/widget\/eden-chat\.js.*$/, "")
-      : "https://eden-chat-two.vercel.app");
+      : "https://eden.jstech-inc.com");
 
   // ── Namespace prefix — keeps our IDs from clashing on WordPress sites ─────
   var NS = "eden-chat-";

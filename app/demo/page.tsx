@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Copy, Check, ExternalLink, BarChart2 } from "lucide-react";
 
 const EDEN_GREEN = "#2E5A3A";
-const PROD_URL = "https://eden-chat-two.vercel.app";
+const PROD_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://eden.jstech-inc.com";
 const WIDGET_URL = `${PROD_URL}/widget/eden-chat.js`;
 
 // Console snippet shown to the user — pretty-printed for readability

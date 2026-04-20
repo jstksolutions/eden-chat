@@ -2,9 +2,18 @@ import { Resend } from "resend";
 import type { LeadRow } from "@/lib/db/supabase";
 import { SCORE_EMOJI } from "@/lib/leads/scoring";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy singleton — constructing Resend at module-top throws when the key is
+// missing, which breaks Vercel's page-data collection on preview builds that
+// don't inherit production env. Instantiate on first send instead.
+let resendClient: Resend | null = null;
+function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  if (!resendClient) resendClient = new Resend(key);
+  return resendClient;
+}
 
-const FROM = "Eden Care Assistant <notifications@eden-chat-two.vercel.app>";
+const FROM = process.env.RESEND_FROM_ADDRESS ?? "Eden Chat <onboarding@resend.dev>";
 const DEFAULT_TO = "admissions@edenseniorhc.com";
 
 // Minimum data required before we bother sending an email.
@@ -183,8 +192,8 @@ function buildHtml(lead: LeadRow, sentAt: string): string {
 export async function sendLeadEmail(lead: LeadRow): Promise<void> {
   if (!hasMinimumData(lead)) return;
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  const resend = getResend();
+  if (!resend) {
     console.log("[email] RESEND_API_KEY not set — skipping email for lead", lead.session_id);
     return;
   }
