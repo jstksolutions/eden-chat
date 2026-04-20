@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/server";
+
+export const metadata: Metadata = { title: "Profile" };
 
 export default async function SettingsProfilePage() {
   const session = await getSessionContext();

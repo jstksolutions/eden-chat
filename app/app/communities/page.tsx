@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/server";
 import { listFacilities } from "@/lib/app-data";
 import { PageHeader } from "../_components/PageHeader";
 import { CommunityCard } from "./_CommunityCard";
+
+export const metadata: Metadata = { title: "Communities" };
 
 export default async function CommunitiesPage() {
   const session = await getSessionContext();

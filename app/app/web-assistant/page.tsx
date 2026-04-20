@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/server";
 import { listFacilities } from "@/lib/app-data";
 import { PageHeader } from "../_components/PageHeader";
 import { WebAssistantPanel } from "./_Panel";
+
+export const metadata: Metadata = { title: "Web Assistant" };
 
 export default async function WebAssistantPage() {
   const session = await getSessionContext();

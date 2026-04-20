@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/server";
 import { listFacilities } from "@/lib/app-data";
 import { TourHoursForm } from "./_Form";
+
+export const metadata: Metadata = { title: "Tour Availability" };
 
 export default async function TourHoursPage() {
   const session = await getSessionContext();

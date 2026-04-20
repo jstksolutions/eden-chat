@@ -94,7 +94,7 @@ export function LineChart({ data }: { data: Point[] }) {
       <path
         d={buildPath("tours")}
         fill="none"
-        stroke="#0fb5a6"
+        stroke="#2BB3A3"
         strokeWidth={2}
       />
       <path
@@ -117,7 +117,7 @@ export function LineChart({ data }: { data: Point[] }) {
             cx={x(data.length - 1)}
             cy={y(data[data.length - 1].tours)}
             r={3}
-            fill="#0fb5a6"
+            fill="#2BB3A3"
           />
           <circle
             cx={x(data.length - 1)}

@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { Send } from "lucide-react";
 import { Phase2Stub } from "../_components/Phase2Stub";
+
+export const metadata: Metadata = { title: "Messaging" };
 
 export default function Page() {
   return (

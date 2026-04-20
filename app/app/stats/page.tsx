@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext, getServiceRoleClient } from "@/lib/auth/server";
 import { listFacilities, listLeads } from "@/lib/app-data";
@@ -6,6 +7,8 @@ import { StatsFilters } from "./_StatsFilters";
 import { FunnelBar } from "./_FunnelBar";
 import { LineChart } from "./_LineChart";
 import { PrintButton } from "./_PrintButton";
+
+export const metadata: Metadata = { title: "Stats" };
 
 interface StatsSearchParams {
   facility?: string;
@@ -183,7 +186,7 @@ export default async function StatsPage({
             </h2>
             <div className="flex items-center gap-4 text-[11px]">
               <LegendDot color="#1E2761" label="Leads" />
-              <LegendDot color="#0fb5a6" label="Tours" />
+              <LegendDot color="#2BB3A3" label="Tours" />
               <LegendDot color="#f59e0b" label="Move-ins" />
             </div>
           </div>

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionContext } from "@/lib/auth/server";
@@ -15,6 +16,18 @@ import { DetailTabs } from "./_DetailTabs";
 import { SmsComposer } from "./_SmsComposer";
 import { QuickJumpRail } from "./_QuickJumpRail";
 import { SalespersonField } from "./_SalespersonField";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const session = await getSessionContext();
+  if (!session) return { title: "Conversation" };
+  const lead = await getLead(session.organizationId, id);
+  return { title: lead?.visitor_name ?? "Conversation" };
+}
 
 export default async function ConversationDetailPage({
   params,

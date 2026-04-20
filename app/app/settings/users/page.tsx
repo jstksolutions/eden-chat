@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/lib/auth/server";
 import { listOrgUsers } from "@/lib/app-data";
+
+export const metadata: Metadata = { title: "Users & Permissions" };
 
 const ROLE_DESCRIPTION: Record<string, string> = {
   owner: "Full account owner — billing, settings, org-level config.",
