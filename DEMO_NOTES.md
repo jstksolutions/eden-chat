@@ -1,78 +1,73 @@
-# Eden Chat — Demo Notes
+# Eden Chat — Demo Notes (Apr 20, 2026)
 
-## Live URL
-- Production: `https://eden.jstech-inc.com` (attach the domain in Vercel after first auto-deploy)
-- Fallback: the auto-generated `eden-chat-*.vercel.app` URL from the first demo-hardening deploy
+## URLs
+- Production: https://eden.jstech-inc.com
+- Embed (demo anchor): https://eden.jstech-inc.com/embed/mission-creek
+- Admin Stats: https://eden.jstech-inc.com/app/stats
+- All Conversations: https://eden.jstech-inc.com/app/conversations
+- Bill's Detail: https://eden.jstech-inc.com/app/conversations/1c13a336-c58e-4e72-ad7d-00c960d607a9
+- All Communities: https://eden.jstech-inc.com/app/communities
+- Phase 2 stub (for "what ships next"): https://eden.jstech-inc.com/app/phone-calls
 
-## Demo credentials (password auth — `demo-2026`)
+## Demo credentials (password: `demo-2026`)
 | Email | Role | Display name |
 |---|---|---|
 | `demo-sima@edenseniorhc.com` | admin | Sima Lerman (Demo) |
 | `demo-matt@edenseniorhc.com` | regional | Matt Dunn (Demo) |
 | `jonathan@jstech-inc.com` | owner | Jonathan Serle |
 
-`NEXT_PUBLIC_DEMO_MODE=true` surfaces a **one-click Demo Login** button on `/login` that signs in as Sima instantly.
+`/login` shows a **Demo Login (Sima Lerman)** one-click button while `NEXT_PUBLIC_DEMO_MODE=true` is set in the production env.
 
-## The 3 demo routes
-1. `/embed/mission-creek` — public chat widget, the anchor of the demo. Try the memory-care flow; tour request triggers a confirmation card and writes a lead.
-2. `/app/stats` — live Stats funnel (Visitors → Interactions → Leads → Tours → Move-ins) over the last 30 days, plus daily trend chart.
-3. `/app/conversations` — all scored and stage-tracked chats. Click through to a conversation detail page.
+## Anchor lead
+- **Bill Henderson** — son inquiring for mother Margaret, 82, memory care
+- Community: Mission Creek, Waukegan IL
+- Lead score: 🔴 Urgent (92 move-in score), tour scheduled
+- Deep link: [/app/conversations/1c13a336-c58e-4e72-ad7d-00c960d607a9](https://eden.jstech-inc.com/app/conversations/1c13a336-c58e-4e72-ad7d-00c960d607a9)
 
-## Anchor lead for the demo
-- **Bill Henderson** (Mission Creek, memory_care, move-in score 92, urgent, tour_scheduled)
-- Deep-link: `/app/conversations/1c13a336-c58e-4e72-ad7d-00c960d607a9`
+## Demo flow (suggested)
+1. **`/embed/mission-creek`** — show the visitor-facing chat widget. Try "My mother has mid-stage dementia — can you tell me about your memory care?" and "I'd like to schedule a tour this weekend."
+2. **`/app/stats`** — Sima's view after login. Funnel (Visitors → Interactions → Leads → Tours → Move-ins) + 30-day trend. Teal bars for positive conversion, coral when step drop-off exceeds 50%.
+3. **`/app/conversations`** — search "Bill" to land on the anchor.
+4. **Bill's detail** — walk through the three columns: QuickJumpRail on the left, the conversation + Rachel's note in the center, Community / Details / Processing / Lists tabs on the right. Change the CRM stage dropdown live to show write-back.
+5. **`/app/communities`** — Matt's regional view. 6 communities, edit drawer, pause toggle.
+6. **`/app/phone-calls`** — click through to show the Phase 2 stub (specific Sima copy about phone tracking).
 
-## Seeded state
-- 1 organization: Eden Senior Care
-- 6 communities (IL/OH): Eden Vista Barrington, Eden Vista Wheaton, Mission Creek, Eden Vista Skokie, Eden Heritage Arlington, Eden Gardens Columbus
-- 12 leads across 14 days (urgent/hot/warm/cold mix)
-- 52 conversation messages, 47 CRM timeline events
-- 3 user profiles tied to the Eden org
+## Reset demo button
+Top-right of the chat widget (chevron/refresh icon). Clears the session cookie and returns to the welcome state. Only visible when `NEXT_PUBLIC_DEMO_MODE=true`.
 
-## What's live vs stubbed
+## What's live vs Phase 2
+**Live:** chat widget with facility context, password + demo login, auth-protected admin shell, Stats funnel + trend, All Conversations table, Bill's detail page (including live CRM writes), All Communities + edit drawer, Web Assistant embed snippet tool, Settings (Profile, Users & Permissions, Tour Availability).
 
-**Live (functional):**
-- `/` — chat widget picker, 6 communities + 30+ legacy facilities
-- `/embed/[slug]` — public embed route (iframe-safe)
-- `/login` — password + Demo Login
-- `/app/stats`, `/app/conversations`, `/app/conversations/[id]`, `/app/communities`, `/app/web-assistant`
-- `/app/settings` (Profile, Users & Permissions, Tour Availability)
+**Phase 2 stubs (all render a branded empty state + teal "Ships in Phase 2" pill):** AI Insights, Static Webforms, Landing Pages, AI Agents, Phone Calls, Messaging, plus ten Settings sub-items (Move-In Upload, Amenities, Campaigns, Marketing Email, Email Suppression List, Google Ads, Qualifying Leads, Unqualified Lead Filter, Content Hub, VSA Banner).
 
-**Phase 2 stubs (every nav item renders a branded empty state with the "Ships in Phase 2" pill):**
-- AI Insights, Static Webforms, Landing Pages, AI Agents, Phone Calls, Messaging
-- Settings: Move-In Upload, Amenities, Campaigns, Marketing Email, Email Suppression List, Google Ads, Qualifying Leads, Unqualified Lead Filter, Content Hub, VSA Banner
+**Phase 3 stub:** Job Applicants.
 
-**Phase 3 stub:**
-- Job Applicants
+## Sanity checks pre-call
+- [x] `/` returns 200
+- [x] `/app/stats` 307 → `/login` when unauthenticated; renders funnel + chart when authenticated
+- [x] `/embed/mission-creek` returns 200
+- [x] `/robots.txt` disallows all
+- [x] `/api/chat` streams real AI responses grounded in facility data
+- [x] Bill Henderson appears on `/app/conversations` and at the deep link
+- [x] All 6 communities render on `/app/communities`
+- [x] Every Phase 2 stub route renders its empty state (not a crash or 404)
+- [x] Custom domain `eden.jstech-inc.com` is live
+- [x] Vercel Deployment Protection is **OFF** for production (user verified)
+- [x] Preview + production share the same env vars (user added Preview scope)
 
-## Demo-day safety checklist
-Before showing the dashboard live:
-- [ ] Vercel **Deployment Protection** turned **OFF** on production — Sima must not hit a 403
-- [ ] `NEXT_PUBLIC_DEMO_MODE=true` set in Vercel production env
-- [ ] `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` present in Vercel production env
-- [ ] Custom domain `eden.jstech-inc.com` attached in Vercel and DNS pointing at the Vercel CNAME
-- [ ] `/robots.txt` serves `Disallow: /` (blocks indexing)
-- [ ] Spot-check: visit `/app/phone-calls` — should render the Phase 2 empty state, no 404
-- [ ] Spot-check: visit `/app/conversations/1c13a336-c58e-4e72-ad7d-00c960d607a9` — Bill Henderson's detail view renders
+## Email notifications
+`lib/notifications/email.ts` reads `RESEND_FROM_ADDRESS`; defaults to Resend's sandbox `onboarding@resend.dev` if not set. Custom sender will need `eden.jstech-inc.com` verified in Resend — not blocking for the demo.
+
+## Known quirks
+- `/api/lead` is a stub that logs leads but doesn't persist. Real persistence happens inside `/api/chat` via `<lead_data>` tag extraction — the route that matters for the demo.
+- Chat widget at `/embed/[slug]` fills its iframe. When visited directly on a full desktop window it stretches. Designed for iframe embed on Eden WordPress sites.
+- The Chrome extension I used from the automation pane throws `Cannot access a chrome-extension:// URL of different extension` on some interactive actions — doesn't affect the actual app, only automated click testing. E2E was instead validated via scripted HTTP + cookie-authenticated request path.
 
 ## Running locally
 ```bash
 npm install
 npm run build
-npm run start    # http://localhost:3000
+npm run start   # http://localhost:3000
 ```
 
-Requires `.env.local` with the Supabase + Anthropic + Resend credentials (see `.env.example`).
-
-## Email notifications
-`lib/notifications/email.ts` defaults `FROM` to `onboarding@resend.dev` when `RESEND_FROM_ADDRESS` isn't set. That address is always deliverable but only to the Resend account owner — fine for demo, swap when a custom domain is Resend-verified.
-
-## What's intentionally NOT built
-Per the hardening brief, these stayed out of scope:
-- Real WelcomeHome / Twilio / SMS / phone recording integrations
-- Real ad-platform connections (Google Ads / Facebook)
-- Email campaign builder, suppression lists, calendar sync
-- Benchmarking, Content Hub, Job Applicants flow
-- Move-In batch upload, financial-provider handoff
-
-Each of these has a Phase 2 stub page so the demo surface matches the SOW scope.
+Requires `.env.local` populated per `.env.example`.
