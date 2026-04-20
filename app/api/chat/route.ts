@@ -108,7 +108,7 @@ export async function POST(req: Request): Promise<Response> {
 
         const row: LeadRow = {
           session_id: sessionId,
-          facility_id: lead.facility_id || facility.id,
+          facility_slug: lead.facility_id || facility.id,
           facility_name: lead.facility_name || facility.name,
           visitor_name: lead.visitor_name || null,
           visitor_phone: lead.visitor_phone || null,
