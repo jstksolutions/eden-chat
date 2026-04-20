@@ -4,7 +4,7 @@ import { SCORE_EMOJI } from "@/lib/leads/scoring";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = "Eden Care Assistant <notifications@eden-chat-two.vercel.app>";
+const FROM = process.env.RESEND_FROM_ADDRESS ?? "Eden Chat <onboarding@resend.dev>";
 const DEFAULT_TO = "admissions@edenseniorhc.com";
 
 // Minimum data required before we bother sending an email.

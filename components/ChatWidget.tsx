@@ -3,15 +3,18 @@
 import { useChat } from "@ai-sdk/react";
 import { TextStreamChatTransport, isTextUIPart } from "ai";
 import type { UIMessage } from "ai";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 
 interface ChatWidgetProps {
   facilityId: string;
   facilityName: string;
+  facilityPhone?: string;
   facilityType?: "snf" | "al" | "memory_care" | "rehab";
   primaryColor?: string;
   isEmbedded?: boolean;
+  /** Show a reset button (demo mode only) */
+  resettable?: boolean;
 }
 
 const LEAD_REGEX = /<lead_data>([\s\S]*?)<\/lead_data>/;
@@ -25,10 +28,13 @@ const SNF_QUICK_REPLIES = [
 const AL_QUICK_REPLIES = [
   "Schedule a tour",
   "Tell me about your community",
-  "Pricing information",
+  "What makes you different?",
 ];
 
-function extractLeadData(text: string): { clean: string; data: Record<string, string> | null } {
+function extractLeadData(text: string): {
+  clean: string;
+  data: Record<string, string> | null;
+} {
   const match = text.match(LEAD_REGEX);
   if (!match) return { clean: text, data: null };
   let data: Record<string, string> | null = null;
@@ -54,7 +60,7 @@ function makeWelcomeMessage(facilityName: string): UIMessage {
     parts: [
       {
         type: "text",
-        text: `Hi! Welcome to ${facilityName}. I'm here to help you learn about our care services, answer questions about insurance and admissions, or connect you with our team. How can I help you today?`,
+        text: `Hi! Welcome to ${facilityName}. I'm here to help you learn about our community, answer questions, or schedule a tour. How can I help you today?`,
       },
     ],
   };
@@ -77,13 +83,19 @@ function TypingDots() {
 export function ChatWidget({
   facilityId,
   facilityName,
+  facilityPhone,
   facilityType,
-  primaryColor = "#2E5A3A",
+  primaryColor = "#1E2761",
   isEmbedded = false,
+  resettable = false,
 }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(isEmbedded);
   const [input, setInput] = useState("");
   const [hasUserMessage, setHasUserMessage] = useState(false);
+  const [tourConfirmation, setTourConfirmation] = useState<{
+    time: string | null;
+    masked: string | null;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const submittedLeads = useRef<Set<string>>(new Set());
   const messageTimestamps = useRef<Map<string, string>>(new Map());
@@ -115,29 +127,47 @@ export function ChatWidget({
     }
   }, [messages]);
 
-  // Fire-and-forget lead capture (server-side upsert handles the real work)
+  // Fire-and-forget lead capture (server handles the real work). When the AI
+  // emits tour_requested=true, flip into the confirmation card.
   useEffect(() => {
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
       if (submittedLeads.current.has(msg.id)) continue;
       const text = getMessageText(msg);
       const { data } = extractLeadData(text);
-      if (data) {
-        submittedLeads.current.add(msg.id);
-        fetch("/api/lead", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...data, facilityId }),
-        }).catch(() => {});
+      if (!data) continue;
+      submittedLeads.current.add(msg.id);
+      if (data.tour_requested === "true") {
+        setTourConfirmation({
+          time: data.tour_preferred_time || null,
+          masked: maskPhone(data.visitor_phone || null),
+        });
       }
+      fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, facilityId }),
+      }).catch(() => {});
     }
   }, [messages, facilityId]);
 
+  function resetSession() {
+    sessionId.current = crypto.randomUUID();
+    submittedLeads.current.clear();
+    messageTimestamps.current.clear();
+    setMessages([makeWelcomeMessage(facilityName)]);
+    setHasUserMessage(false);
+    setInput("");
+    setTourConfirmation(null);
+  }
+
   useEffect(() => {
+    sessionId.current = crypto.randomUUID();
     setMessages([makeWelcomeMessage(facilityName)]);
     submittedLeads.current.clear();
     messageTimestamps.current.clear();
     setHasUserMessage(false);
+    setTourConfirmation(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facilityId]);
 
@@ -166,16 +196,22 @@ export function ChatWidget({
     if (!messageTimestamps.current.has(messageId)) {
       messageTimestamps.current.set(
         messageId,
-        new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+        new Date().toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        })
       );
     }
     return messageTimestamps.current.get(messageId)!;
   }
 
   const isSNF = facilityType === "snf" || facilityType === "rehab";
-  const quickReplies = !hasUserMessage && !isLoading
-    ? (isSNF ? SNF_QUICK_REPLIES : AL_QUICK_REPLIES)
-    : null;
+  const quickReplies =
+    !hasUserMessage && !isLoading
+      ? isSNF
+        ? SNF_QUICK_REPLIES
+        : AL_QUICK_REPLIES
+      : null;
 
   const chatPanel = (
     <div
@@ -195,19 +231,33 @@ export function ChatWidget({
             <MessageCircle className="text-white" size={16} />
           </div>
           <div>
-            <p className="text-white font-semibold text-sm leading-tight">{facilityName}</p>
+            <p className="text-white font-semibold text-sm leading-tight">
+              {facilityName}
+            </p>
             <p className="text-white/80 text-xs">Care Assistant</p>
           </div>
         </div>
-        {!isEmbedded && (
-          <button
-            onClick={() => setIsOpen(false)}
-            className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
-            aria-label="Close chat"
-          >
-            <X size={20} />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {resettable && (
+            <button
+              onClick={resetSession}
+              className="text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+              title="Reset demo"
+              aria-label="Reset demo"
+            >
+              <RefreshCw size={15} />
+            </button>
+          )}
+          {!isEmbedded && (
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+              aria-label="Close chat"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -234,12 +284,16 @@ export function ChatWidget({
               >
                 {displayText}
               </div>
-              <span className="text-[10px] text-gray-400 mt-0.5 px-1" suppressHydrationWarning>{timestamp}</span>
+              <span
+                className="text-[10px] text-gray-400 mt-0.5 px-1"
+                suppressHydrationWarning
+              >
+                {timestamp}
+              </span>
             </div>
           );
         })}
 
-        {/* Quick reply chips — disappear after first user message */}
         {quickReplies && (
           <div className="flex flex-col gap-1.5 pt-1">
             {quickReplies.map((reply) => (
@@ -252,6 +306,42 @@ export function ChatWidget({
                 {reply}
               </button>
             ))}
+          </div>
+        )}
+
+        {tourConfirmation && (
+          <div
+            className="border rounded-2xl p-4 my-2"
+            style={{
+              borderColor: primaryColor,
+              backgroundColor: "rgba(30, 39, 97, 0.04)",
+            }}
+          >
+            <div
+              className="flex items-center gap-2 mb-2"
+              style={{ color: primaryColor }}
+            >
+              <CheckCircle2 size={18} />
+              <p className="text-sm font-semibold">Tour request received</p>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              {tourConfirmation.time
+                ? `Our team will confirm your ${tourConfirmation.time} tour shortly`
+                : "Our team will reach out to confirm your tour shortly"}
+              {tourConfirmation.masked ? ` — confirmation going to ${tourConfirmation.masked}.` : "."}
+            </p>
+            {facilityPhone && (
+              <p className="text-xs text-gray-500 mt-2">
+                Questions? Call us at{" "}
+                <a
+                  href={`tel:${facilityPhone.replace(/\D/g, "")}`}
+                  style={{ color: primaryColor }}
+                  className="font-semibold"
+                >
+                  {facilityPhone}
+                </a>
+              </p>
+            )}
           </div>
         )}
 
@@ -268,7 +358,10 @@ export function ChatWidget({
 
       {/* Input */}
       <div className="shrink-0 border-t border-gray-200">
-        <form onSubmit={(e) => void handleSubmit(e)} className="flex items-end gap-2 p-3">
+        <form
+          onSubmit={(e) => void handleSubmit(e)}
+          className="flex items-end gap-2 p-3"
+        >
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -289,8 +382,8 @@ export function ChatWidget({
             <Send size={16} />
           </button>
         </form>
-        <p className="text-center text-xs text-gray-400 pb-2">
-          Powered by JS Technology Solutions
+        <p className="text-center text-[10px] text-gray-400 pb-2">
+          Powered by Eden Chat
         </p>
       </div>
     </div>
@@ -320,4 +413,11 @@ export function ChatWidget({
       </button>
     </>
   );
+}
+
+function maskPhone(phone: string | null): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 4) return null;
+  return `***-***-${digits.slice(-4)}`;
 }

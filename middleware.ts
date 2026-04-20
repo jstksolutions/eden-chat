@@ -35,13 +35,14 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   return response;
 }
 
-// Run only on admin routes — lean and fast.
+// Protects /app/* and /api/admin/*. Public embed routes (/, /embed/*) stay open.
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/app/:path*", "/api/admin/:path*"],
 };
