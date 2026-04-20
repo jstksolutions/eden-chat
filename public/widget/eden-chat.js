@@ -36,7 +36,12 @@
     "vistapinehaven.com": "vista-pine-haven",
     "missioncreekseniorliving.com": "mission-creek",
     "edenvistaoshkosh.com": "eden-vista-oshkosh",
-    "edenvistastow.com": "eden-vista-stow"
+    "edenvistastow.com": "eden-vista-stow",
+    "edenvistabarrington.com": "eden-vista-barrington",
+    "edenvistawheaton.com": "eden-vista-wheaton",
+    "edenvistaskokie.com": "eden-vista-skokie",
+    "edengardenscolumbus.com": "eden-gardens-columbus",
+    "edenheritage.com": "eden-heritage-arlington"
   };
 
   function detectFacilityFromHostname() {
